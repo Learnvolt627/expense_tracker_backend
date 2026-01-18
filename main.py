@@ -2,6 +2,7 @@ from flask import Flask,request
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
+from flask import render_template
 
 
 
@@ -93,6 +94,9 @@ def delete_expense(id):
     db.session.commit()
 
     return {'message': 'expense deleted'}, 200
+@app.route('/')
+def home():
+    return render_template('index.html')
         
 
 if __name__=='__main__':
@@ -101,4 +105,4 @@ if __name__=='__main__':
     with app.app_context():
         db.create_all()
         print('database created')
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

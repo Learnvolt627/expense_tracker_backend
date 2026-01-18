@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+  </head>
+  <body>
+    <h1>Expense Tracker</h1>
+    <input type="text" id="expense_title" placeholder="Expense Title" />
+    <input type="number" id="expense_amount" placeholder="Amount" />
+    <input type="text" id="expense_category" placeholder="Category" />
+
+    <button onclick="sendData()">Add Expense</button>
+
+    <script>
+      // javascript
+      async function sendData() {
+        // get values from the boxes above
+        let title = document.getElementById("expense_title").value;
+        let amount = document.getElementById("expense_amount").value;
+        let category = document.getElementById("expense_category").value;
+
+        //send data to the backend
+
+        await fetch("/expenses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: title,
+            amount: amount,
+            category: category,
+          }),
+        });
+
+        alert("Expense Added Successfully!");
+      }
+    </script>
+  </body>
+</html>
