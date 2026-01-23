@@ -1,12 +1,20 @@
 from flask import Flask,request
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime,timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import render_template
+from ledger import Blockchain, ExpenseBlock # we import both the classes we just made
+from flask import jsonify
+
+
+
 
 
 
 app=Flask(__name__)
+
+
+my_ledger=Blockchain()
 
 app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///expenses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False #this is to disable the warning
@@ -36,11 +44,63 @@ def add_expenses():
         category=data.get('category') #category is optional so get is safer as it can return none
     )
 
+    transaction_data={
+        'title': data['title'],
+        'amount': data['amount'],
+        'category':data.get('category')
+    }
+
+
+    block=my_ledger.add_expense(transaction_data)
+
+    #add to blockchain ledger
+    block= my_ledger.add_expense({
+        'message': 'New expense added',
+        'block_index': block.index,
+        'hash': block.current_hash
+
+    })
+
     #we add the new expense to the db and save
     db.session.add(new_expense)
     db.session.commit()
 
-    return{'message': "expense added"} , 201
+    return jsonify({
+        'message': 'Expense added to ledger',
+        'block_index': block.index,
+        'hash': block.current_hash,
+        'previous_hash': block.previous_hash
+    }), 201
+
+
+
+
+
+@app.route('/chain', methods=['GET'])
+def get_chain():
+    chain_data=[]
+    for block in my_ledger.chain:
+        chain_data.append({
+            'index': block.index,
+            'expense_data': block.expense_data,
+            'timestamp': block.timestamp,
+            'previous_hash': block.previous_hash,
+            'current_hash': block.current_hash
+        })
+    return jsonify({'length': len(chain_data), 'chain': chain_data}), 200
+
+@app.route('/verify_ledger', methods=['GET'])
+def verify_ledger():
+    is_valid=my_ledger.is_chain_valid()
+    
+    if is_valid:
+        return jsonify({'status':'Secure' , 'message': 'Ledger is valid'})
+    else:
+        return jsonify({'status':'Corrupted', 'message': "Tampering detected" })
+    
+    
+
+
 @app.route('/expenses', methods=['GET'])
 def get_expenses():
     #fetch all expenses 
@@ -94,6 +154,14 @@ def delete_expense(id):
     db.session.commit()
 
     return {'message': 'expense deleted'}, 200
+
+#temporary code to hack the ledger
+@app.route('/hack_ledger',methods=['GET'])
+def hack_ledger():
+    if len(my_ledger.chain)>1:
+        my_ledger.chain[1].expense_data['amount']=6666666
+        return jsonify({'message': 'Ledger hacked!'}), 200
+    return jsonify({'message': 'Not enough blocks to hack!'}), 400
 @app.route('/')
 def home():
     return render_template('index.html')
